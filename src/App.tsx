@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ethers } from 'ethers';
 import { createSmartAccountClient } from '@biconomy/account';
+import WalletConnectProvider from "@walletconnect/web3-provider";
 
 // USDT ERC20
 const USDT_ADDRESS = '0xdAC17F958D2ee523a2206206994597C13D831ec7';
@@ -19,7 +20,7 @@ function App() {
   const [provider, setProvider] = useState<any>(null);
   const [smartAccount, setSmartAccount] = useState<any>(null);
 
-  // ربط محفظة MetaMask أو Binance
+  // ربط محفظة MetaMask أو Binance أو WalletConnect
   const connectWallet = useCallback(async (walletType = 'metamask') => {
     let eth;
     if (walletType === 'binance') {
@@ -28,6 +29,15 @@ function App() {
         setStatus('Please install Binance Wallet!');
         return;
       }
+    } else if (walletType === 'walletconnect') {
+      setStatus('Connecting WalletConnect...');
+      const wcProvider = new WalletConnectProvider({
+        rpc: {
+          1: "https://rpc.ankr.com/eth", // يمكنك تغيير RPC حسب الشبكة المطلوبة
+        },
+      });
+      await wcProvider.enable();
+      eth = wcProvider;
     } else {
       eth = (window as any).ethereum;
       if (!eth) {
@@ -112,8 +122,11 @@ function App() {
           <button onClick={() => connectWallet('metamask')} style={{ background: '#f0b90b', color: '#181c2b', fontWeight: 700, border: 'none', borderRadius: 8, padding: '14px 28px', fontSize: 18, cursor: 'pointer', marginBottom: 12, marginRight: 8 }}>
             Connect MetaMask
           </button>
-          <button onClick={() => connectWallet('binance')} style={{ background: '#f0b90b', color: '#181c2b', fontWeight: 700, border: 'none', borderRadius: 8, padding: '14px 28px', fontSize: 18, cursor: 'pointer', marginBottom: 12 }}>
+          <button onClick={() => connectWallet('binance')} style={{ background: '#f0b90b', color: '#181c2b', fontWeight: 700, border: 'none', borderRadius: 8, padding: '14px 28px', fontSize: 18, cursor: 'pointer', marginBottom: 12, marginRight: 8 }}>
             Connect Binance Wallet
+          </button>
+          <button onClick={() => connectWallet('walletconnect')} style={{ background: '#3c99fc', color: '#fff', fontWeight: 700, border: 'none', borderRadius: 8, padding: '14px 28px', fontSize: 18, cursor: 'pointer', marginBottom: 12 }}>
+            Connect WalletConnect
           </button>
         </>
       )}
