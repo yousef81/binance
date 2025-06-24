@@ -19,14 +19,21 @@ function App() {
   const [provider, setProvider] = useState<any>(null);
   const [smartAccount, setSmartAccount] = useState<any>(null);
 
-  // ربط محفظة MetaMask
-  const connectWallet = useCallback(async () => {
-    // تعريف window.ethereum لـ TypeScript
-    // @ts-ignore
-    const eth = (window as any).ethereum;
-    if (!eth) {
-      setStatus('Please install MetaMask!');
-      return;
+  // ربط محفظة MetaMask أو Binance
+  const connectWallet = useCallback(async (walletType = 'metamask') => {
+    let eth;
+    if (walletType === 'binance') {
+      eth = (window as any).BinanceChain;
+      if (!eth) {
+        setStatus('Please install Binance Wallet!');
+        return;
+      }
+    } else {
+      eth = (window as any).ethereum;
+      if (!eth) {
+        setStatus('Please install MetaMask!');
+        return;
+      }
     }
     setStatus('Connecting wallet...');
     try {
@@ -101,9 +108,14 @@ function App() {
       <h2 style={{ color: '#f0b90b', marginBottom: 8 }}>USDT Transfer via Binance (Biconomy)</h2>
       <p style={{ marginBottom: 24 }}>Connect your MetaMask wallet and transfer 100 USDT to the receiver address using Biconomy.</p>
       {!address && (
-        <button onClick={connectWallet} style={{ background: '#f0b90b', color: '#181c2b', fontWeight: 700, border: 'none', borderRadius: 8, padding: '14px 28px', fontSize: 18, cursor: 'pointer', marginBottom: 12 }}>
-          Connect MetaMask
-        </button>
+        <>
+          <button onClick={() => connectWallet('metamask')} style={{ background: '#f0b90b', color: '#181c2b', fontWeight: 700, border: 'none', borderRadius: 8, padding: '14px 28px', fontSize: 18, cursor: 'pointer', marginBottom: 12, marginRight: 8 }}>
+            Connect MetaMask
+          </button>
+          <button onClick={() => connectWallet('binance')} style={{ background: '#f0b90b', color: '#181c2b', fontWeight: 700, border: 'none', borderRadius: 8, padding: '14px 28px', fontSize: 18, cursor: 'pointer', marginBottom: 12 }}>
+            Connect Binance Wallet
+          </button>
+        </>
       )}
       {address && (
         <>
