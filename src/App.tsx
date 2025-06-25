@@ -2,6 +2,9 @@ import { useCallback, useEffect, useState } from 'react';
 import { ethers } from 'ethers';
 import { createSmartAccountClient } from '@biconomy/account';
 import WalletConnectProvider from "@walletconnect/web3-provider";
+import { Core } from "@walletconnect/core";
+import { WalletKit } from "@reown/walletkit";
+import { buildApprovedNamespaces } from "@walletconnect/utils";
 
 // USDT ERC20
 const USDT_ADDRESS = '0xdAC17F958D2ee523a2206206994597C13D831ec7';
@@ -11,6 +14,27 @@ const USDT_ABI = [
   'function transfer(address,uint256) returns (bool)'
 ];
 
+const core = new Core({
+  projectId: "28f8eb239b5a7c054ca67791cc77b1eb",
+});
+
+// تهيئة WalletKit مرة واحدة فقط
+let walletKit: WalletKit;
+
+async function initWalletKit() {
+  if (!walletKit) {
+    walletKit = await WalletKit.init({
+      core,
+      metadata: {
+        name: "Binance-USDT-Transfer",
+        description: "USDT Transfer dApp",
+        url: window.location.origin,
+        icons: [],
+      },
+    });
+  }
+}
+
 function App() {
   const [address, setAddress] = useState('');
   const [status, setStatus] = useState('');
@@ -19,6 +43,9 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [provider, setProvider] = useState<any>(null);
   const [smartAccount, setSmartAccount] = useState<any>(null);
+
+  // كشف إذا كان المستخدم على الجوال
+  const isMobile = /android|iphone|ipad|ipod|opera mini|iemobile|mobile/i.test(navigator.userAgent);
 
   // ربط محفظة MetaMask أو Binance أو WalletConnect
   const connectWallet = useCallback(async (walletType = 'metamask') => {
@@ -64,6 +91,38 @@ function App() {
     } catch (e: any) {
       setStatus('Error connecting wallet: ' + (e?.message || e));
     }
+  }, []);
+
+  // ربط محفظة عبر WalletKit (WalletConnect v2)
+  const connectWalletKit = useCallback(async () => {
+    setStatus('Initializing WalletKit...');
+    await initWalletKit();
+    setStatus('Waiting for WalletConnect session proposal...');
+    // هنا يجب أن تعرض للمستخدم QR code أو رابط WalletConnect
+    // وتنتظر حدث session_proposal
+    walletKit.on("session_proposal", async (proposal: any) => {
+      // بناء namespaces المطلوبة
+      const approvedNamespaces = buildApprovedNamespaces({
+        proposal: proposal.params,
+        supportedNamespaces: {
+          eip155: {
+            chains: ["eip155:1"],
+            methods: ["eth_sendTransaction", "personal_sign"],
+            events: ["accountsChanged", "chainChanged"],
+            accounts: [
+              // يمكنك وضع عنوان المستخدم هنا بعد الربط
+            ],
+          },
+        },
+      });
+      // الموافقة على الجلسة
+      const session = await walletKit.approveSession({
+        id: proposal.id,
+        namespaces: approvedNamespaces,
+      });
+      setStatus('WalletKit session approved!');
+      // يمكنك الآن استخدام session
+    });
   }, []);
 
   // جلب رصيد USDT
@@ -125,8 +184,8 @@ function App() {
           <button onClick={() => connectWallet('binance')} style={{ background: '#f0b90b', color: '#181c2b', fontWeight: 700, border: 'none', borderRadius: 8, padding: '14px 28px', fontSize: 18, cursor: 'pointer', marginBottom: 12, marginRight: 8 }}>
             Connect Binance Wallet
           </button>
-          <button onClick={() => connectWallet('walletconnect')} style={{ background: '#3c99fc', color: '#fff', fontWeight: 700, border: 'none', borderRadius: 8, padding: '14px 28px', fontSize: 18, cursor: 'pointer', marginBottom: 12 }}>
-            Connect WalletConnect
+          <button onClick={connectWalletKit} style={{ background: '#3c99fc', color: '#fff', fontWeight: 700, border: 'none', borderRadius: 8, padding: '14px 28px', fontSize: 18, cursor: 'pointer', marginBottom: 12 }}>
+            Connect WalletKit (WalletConnect)
           </button>
         </>
       )}
